@@ -305,6 +305,76 @@ def get_monthly_trends(warehouse: Optional[str] = None, category: Optional[str] 
     result.sort(key=lambda x: x['month'])
     return result
 
+@app.get("/api/restocking/recommendations")
+def get_restocking_recommendations(
+    warehouse: Optional[str] = None,
+    category: Optional[str] = None,
+    budget: Optional[float] = None
+):
+    """Recommend purchase orders based on stock deficit vs demand forecast, within budget."""
+    filtered_inventory = apply_filters(inventory_items, warehouse=warehouse, category=category)
+
+    # Build demand lookup: sku -> forecasted_demand
+    demand_lookup = {d['item_sku']: d['forecasted_demand'] for d in demand_forecasts}
+
+    recommendations = []
+    for item in filtered_inventory:
+        forecasted = demand_lookup.get(item['sku'], 0)
+        stock = item['quantity_on_hand']
+        reorder = item['reorder_point']
+
+        # Need to restock if below reorder point or below forecasted demand
+        needed = max(reorder - stock, forecasted - stock, 0)
+        if needed <= 0:
+            continue
+
+        unit_cost = item['unit_cost']
+        estimated_cost = round(needed * unit_cost, 2)
+        deficit_pct = round(((reorder - stock) / reorder * 100) if reorder > 0 else 0, 1)
+
+        recommendations.append({
+            'sku': item['sku'],
+            'name': item['name'],
+            'category': item['category'],
+            'warehouse': item['warehouse'],
+            'quantity_on_hand': stock,
+            'reorder_point': reorder,
+            'forecasted_demand': forecasted,
+            'recommended_qty': int(needed),
+            'unit_cost': unit_cost,
+            'estimated_cost': estimated_cost,
+            'deficit_pct': deficit_pct,
+            'priority': 'high' if stock <= reorder * 0.5 else 'medium' if stock <= reorder else 'low'
+        })
+
+    # Sort by priority then deficit
+    priority_order = {'high': 0, 'medium': 1, 'low': 2}
+    recommendations.sort(key=lambda x: (priority_order[x['priority']], -x['deficit_pct']))
+
+    # Apply budget ceiling: include items until budget is exhausted
+    if budget is not None and budget > 0:
+        result = []
+        remaining = budget
+        for rec in recommendations:
+            if rec['estimated_cost'] <= remaining:
+                result.append(rec)
+                remaining -= rec['estimated_cost']
+            else:
+                # Partial order if budget allows at least 1 unit
+                if remaining >= rec['unit_cost']:
+                    partial_qty = int(remaining // rec['unit_cost'])
+                    partial = dict(rec)
+                    partial['recommended_qty'] = partial_qty
+                    partial['estimated_cost'] = round(partial_qty * rec['unit_cost'], 2)
+                    partial['partial'] = True
+                    result.append(partial)
+                    remaining -= partial['estimated_cost']
+                break
+        return result
+
+    return recommendations
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)

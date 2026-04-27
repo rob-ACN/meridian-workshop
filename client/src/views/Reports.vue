@@ -126,10 +126,10 @@
 
 <script>
 import { ref, computed, watch, onMounted } from 'vue'
-import { api } from '@/api'
-import { useFilters } from '@/composables/useFilters'
-import { useI18n } from '@/composables/useI18n'
-import { formatCurrency } from '@/utils/currency'
+import { api } from '../api'
+import { useFilters } from '../composables/useFilters'
+import { useI18n } from '../composables/useI18n'
+import { formatCurrency } from '../utils/currency'
 
 export default {
   name: 'Reports',

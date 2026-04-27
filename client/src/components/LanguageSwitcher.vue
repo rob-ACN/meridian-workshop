@@ -17,7 +17,7 @@
         <path d="M10 3C10 3 7.5 5.5 7.5 10C7.5 14.5 10 17 10 17" stroke="currentColor" stroke-width="1.5"/>
         <path d="M10 3C10 3 12.5 5.5 12.5 10C12.5 14.5 10 17 10 17" stroke="currentColor" stroke-width="1.5"/>
       </svg>
-      <span class="language-label">{{ localeName }}</span>
+      <span class="language-label">{{ currentLocale.toUpperCase() }}</span>
       <svg
         class="chevron"
         :class="{ 'chevron-open': isDropdownOpen }"
@@ -63,8 +63,12 @@ const { currentLocale, setLocale, availableLocales, localeName } = useI18n()
 const isDropdownOpen = ref(false)
 
 const languageNames = {
-  en: 'English',
-  ja: '日本語'
+  en: '🇬🇧 English',
+  ja: '🇯🇵 日本語',
+  it: '🇮🇹 Italiano',
+  es: '🇪🇸 Español',
+  fr: '🇫🇷 Français',
+  de: '🇩🇪 Deutsch'
 }
 
 const getLanguageName = (locale) => {
@@ -136,7 +140,7 @@ const selectLanguage = (locale) => {
   position: absolute;
   top: calc(100% + 0.5rem);
   right: 0;
-  min-width: 160px;
+  min-width: 200px;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 10px;

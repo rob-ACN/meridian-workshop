@@ -1,10 +1,18 @@
 import { ref, computed } from 'vue'
 import en from '../locales/en'
 import ja from '../locales/ja'
+import it from '../locales/it'
+import es from '../locales/es'
+import fr from '../locales/fr'
+import de from '../locales/de'
 
 const translations = {
   en,
-  ja
+  ja,
+  it,
+  es,
+  fr,
+  de
 }
 
 // Load saved locale from localStorage, default to 'en'
@@ -68,8 +76,12 @@ export function useI18n() {
 
   const localeName = computed(() => {
     const names = {
-      en: 'English',
-      ja: '日本語'
+      en: '🇬🇧 English',
+      ja: '🇯🇵 日本語',
+      it: '🇮🇹 Italiano',
+      es: '🇪🇸 Español',
+      fr: '🇫🇷 Français',
+      de: '🇩🇪 Deutsch'
     }
     return names[currentLocale.value] || currentLocale.value
   })
