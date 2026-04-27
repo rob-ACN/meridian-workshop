@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Meridian Dashboard — Architecture Overview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; padding: 40px; }
+  h1 { font-size: 26px; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
+  .subtitle { color: #64748b; font-size: 14px; margin-bottom: 40px; }
+  h2 { font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 16px; }
+  h3 { font-size: 14px; font-weight: 600; color: #f1f5f9; margin-bottom: 6px; }
+
+  /* Layout */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .full { margin-bottom: 24px; }
+
+  /* Cards */
+  .card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .card.warn { border-left: 3px solid #f59e0b; }
+  .card.error { border-left: 3px solid #ef4444; }
+  .card.ok { border-left: 3px solid #10b981; }
+
+  /* Tag */
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+  }
+  .tag.blue { background: #172554; color: #60a5fa; }
+  .tag.green { background: #052e16; color: #4ade80; }
+  .tag.yellow { background: #1c1917; color: #fbbf24; }
+  .tag.red { background: #450a0a; color: #f87171; }
+  .tag.gray { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+
+  /* Text */
+  p { font-size: 13px; color: #94a3b8; line-height: 1.6; margin-top: 6px; }
+  ul { list-style: none; margin-top: 8px; }
+  ul li { font-size: 13px; color: #94a3b8; padding: 3px 0; }
+  ul li::before { content: "→ "; color: #475569; }
+  code { font-family: 'Consolas', monospace; font-size: 12px; background: #0f172a; padding: 1px 5px; border-radius: 3px; color: #7dd3fc; }
+
+  /* Flow diagram */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 20px 0;
+    overflow-x: auto;
+  }
+  .flow-box {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 12px 16px;
+    text-align: center;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .flow-box .label { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+  .flow-box .name { font-size: 13px; font-weight: 600; color: #f1f5f9; }
+  .flow-arrow {
+    color: #475569;
+    font-size: 20px;
+    padding: 0 8px;
+    flex-shrink: 0;
+  }
+  .flow-arrow .detail { font-size: 10px; color: #475569; display: block; text-align: center; margin-top: 2px; }
+
+  /* Endpoint table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #1e293b; }
+  td { padding: 8px 12px; color: #94a3b8; border-bottom: 1px solid #1e293b; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { color: #7dd3fc; font-family: monospace; font-size: 12px; }
+
+  /* Known debt */
+  .debt-list { display: flex; flex-direction: column; gap: 10px; }
+  .debt-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px;
+    background: #0f172a;
+    border-radius: 8px;
+    border: 1px solid #1e293b;
+  }
+  .debt-item .severity {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 4px;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+  .debt-item .severity.high { background: #450a0a; color: #f87171; }
+  .debt-item .severity.med { background: #1c1917; color: #fbbf24; }
+  .debt-item .severity.low { background: #172554; color: #60a5fa; }
+  .debt-item .text h4 { font-size: 13px; color: #f1f5f9; margin-bottom: 3px; }
+  .debt-item .text p { margin: 0; }
+
+  hr { border: none; border-top: 1px solid #1e293b; margin: 32px 0; }
+  .section-title { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<h1>Meridian Components — Dashboard Architecture</h1>
+<p class="subtitle">Current-state overview · Delivered as part of RFP MC-2026-0417 · April 2026</p>
+
+<hr />
+
+<!-- Data flow -->
+<div class="full">
+  <h2>Request / Data Flow</h2>
+  <div class="flow">
+    <div class="flow-box"><div class="label">Browser</div><div class="name">User</div></div>
+    <div class="flow-arrow">→<span class="detail">interaction</span></div>
+    <div class="flow-box"><div class="label">Vue 3 + Vite</div><div class="name">Frontend :3000</div></div>
+    <div class="flow-arrow">→<span class="detail">HTTP GET</span></div>
+    <div class="flow-box"><div class="label">api.js (axios)</div><div class="name">API Client</div></div>
+    <div class="flow-arrow">→<span class="detail">query params</span></div>
+    <div class="flow-box"><div class="label">FastAPI + uvicorn</div><div class="name">Backend :8001</div></div>
+    <div class="flow-arrow">→<span class="detail">loads</span></div>
+    <div class="flow-box"><div class="label">mock_data.py</div><div class="name">JSON Files</div></div>
+  </div>
+  <p style="margin-top:8px;">Filters flow as URL query parameters from Vue composable → <code>api.js</code> → FastAPI → in-memory filtering → Pydantic model → JSON response → computed props in Vue.</p>
+</div>
+
+<hr />
+
+<!-- Frontend -->
+<div class="section-title"><h2 style="margin:0;">Frontend — Vue 3 Views</h2></div>
+<div class="grid-3">
+  <div class="card ok">
+    <span class="tag green">Composition API</span>
+    <h3>Dashboard.vue</h3>
+    <p>KPIs, order health chart, inventory by category, shortage table. Uses all 4 filters.</p>
+  </div>
+  <div class="card ok">
+    <span class="tag green">Composition API</span>
+    <h3>Inventory.vue</h3>
+    <p>Stock table with search, sort by status. Filters: warehouse, category.</p>
+  </div>
+  <div class="card ok">
+    <span class="tag green">Composition API</span>
+    <h3>Orders.vue</h3>
+    <p>Order list with expandable items. Filters: warehouse, category, status, month.</p>
+  </div>
+  <div class="card ok">
+    <span class="tag green">Composition API</span>
+    <h3>Demand.vue</h3>
+    <p>Demand forecasts grouped by trend. No filter integration (returns all).</p>
+  </div>
+  <div class="card ok">
+    <span class="tag green">Composition API</span>
+    <h3>Spending.vue</h3>
+    <p>Revenue/cost charts, transaction table. Static spending data (no filters).</p>
+  </div>
+  <div class="card error">
+    <span class="tag red">Options API · Defects</span>
+    <h3>Reports.vue</h3>
+    <p>Quarterly/monthly performance. Hardcoded $, no filters, 15+ console.log, wrong API pattern.</p>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <span class="tag blue">Composables</span>
+    <h3>useFilters.js</h3>
+    <p>Singleton shared filter state. Provides <code>getCurrentFilters()</code>, <code>resetFilters()</code>, <code>hasActiveFilters</code>. Used by all views except Reports.</p>
+  </div>
+  <div class="card">
+    <span class="tag blue">Composables</span>
+    <h3>useI18n.js</h3>
+    <p>English / Japanese locale toggle. Auto-maps currency: <code>en → USD</code>, <code>ja → JPY</code>. Locale persisted in localStorage. <strong>Not used by Reports.vue.</strong></p>
+  </div>
+</div>
+
+<hr />
+
+<!-- Backend -->
+<div class="section-title"><h2 style="margin:0;">Backend — FastAPI Endpoints</h2></div>
+<div class="card full">
+  <table>
+    <thead>
+      <tr><th>Endpoint</th><th>Filters supported</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>GET /api/inventory</td><td>warehouse, category</td><td>Returns List[InventoryItem]</td></tr>
+      <tr><td>GET /api/inventory/{id}</td><td>—</td><td>Single item or 404</td></tr>
+      <tr><td>GET /api/orders</td><td>warehouse, category, status, month</td><td>Month supports quarters (Q1-2025)</td></tr>
+      <tr><td>GET /api/orders/{id}</td><td>—</td><td>Single order or 404</td></tr>
+      <tr><td>GET /api/demand</td><td>none</td><td>All forecasts, unfiltered</td></tr>
+      <tr><td>GET /api/backlog</td><td>none</td><td>Adds has_purchase_order flag dynamically</td></tr>
+      <tr><td>GET /api/dashboard/summary</td><td>warehouse, category, status, month</td><td>Aggregated KPIs</td></tr>
+      <tr><td>GET /api/spending/*</td><td>none</td><td>summary, monthly, categories, transactions</td></tr>
+      <tr><td>GET /api/reports/quarterly</td><td>none</td><td>Calculated from orders JSON</td></tr>
+      <tr><td>GET /api/reports/monthly-trends</td><td>none</td><td>Month-over-month from orders JSON</td></tr>
+      <tr><td>POST /api/purchase-orders</td><td>—</td><td>Creates PO; no frontend modal yet</td></tr>
+      <tr><td>GET/POST/DELETE /api/tasks</td><td>—</td><td>In-memory only, not persisted to file</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Data files -->
+<div class="section-title"><h2 style="margin:0;">Data Layer — JSON Files</h2></div>
+<div class="grid-3">
+  <div class="card"><span class="tag gray">server/data/</span><h3>inventory.json</h3><p>30+ items. Fields: SKU, name, category, warehouse, quantity, reorder point, unit cost.</p></div>
+  <div class="card"><span class="tag gray">server/data/</span><h3>orders.json</h3><p>50+ orders. Full date range Jan–Dec 2025. Multi-item with quantity and unit price.</p></div>
+  <div class="card"><span class="tag gray">server/data/</span><h3>demand_forecasts.json</h3><p>Trends: increasing / stable / decreasing per SKU.</p></div>
+  <div class="card"><span class="tag gray">server/data/</span><h3>backlog_items.json</h3><p>8–10 shortage items. Priority: high / medium / low.</p></div>
+  <div class="card"><span class="tag gray">server/data/</span><h3>spending.json</h3><p>Summary + 12-month breakdown + category split.</p></div>
+  <div class="card"><span class="tag gray">server/data/</span><h3>transactions.json</h3><p>50+ transactions with vendor, type, amount, date.</p></div>
+</div>
+
+<hr />
+
+<!-- Known debt -->
+<h2>Known Debt — Remediation Backlog</h2>
+<div class="debt-list" style="margin-top:16px;">
+  <div class="debt-item">
+    <span class="severity high">High</span>
+    <div class="text">
+      <h4>Reports.vue — no filter integration</h4>
+      <p>Quarterly and monthly data always returns all records regardless of active filters. Other views respect warehouse / category / period / status selection.</p>
+    </div>
+  </div>
+  <div class="debt-item">
+    <span class="severity high">High</span>
+    <div class="text">
+      <h4>Reports.vue — hardcoded currency ($)</h4>
+      <p>All monetary values use literal <code>"$"</code>. Switching locale to Japanese (JPY) has no effect. <code>useI18n()</code> and <code>formatCurrency()</code> are available but unused.</p>
+    </div>
+  </div>
+  <div class="debt-item">
+    <span class="severity high">High</span>
+    <div class="text">
+      <h4>Reports.vue — Options API (inconsistent pattern)</h4>
+      <p>Only view using Options API. All other views use Composition API with <code>&lt;script setup&gt;</code>. Blocks standard composable usage.</p>
+    </div>
+  </div>
+  <div class="debt-item">
+    <span class="severity med">Med</span>
+    <div class="text">
+      <h4>Reports.vue — 15+ console.log() statements</h4>
+      <p>Debug output left in production code. Creates noise in browser console and exposes internal data structures.</p>
+    </div>
+  </div>
+  <div class="debt-item">
+    <span class="severity med">Med</span>
+    <div class="text">
+      <h4>Missing PurchaseOrderModal component</h4>
+      <p>Dashboard.vue references <code>&lt;PurchaseOrderModal&gt;</code> but the component file does not exist. Backend endpoint is fully implemented.</p>
+    </div>
+  </div>
+  <div class="debt-item">
+    <span class="severity low">Low</span>
+    <div class="text">
+      <h4>Hardcoded KPIs in Dashboard.vue</h4>
+      <p>Inventory turnover (4.2), order fill rate (96.8%), processing time (2.8), revenue goal are hardcoded constants — not derived from data.</p>
+    </div>
+  </div>
+  <div class="debt-item">
+    <span class="severity low">Low</span>
+    <div class="text">
+      <h4>Tasks not persisted</h4>
+      <p>Task CRUD works in memory but changes are lost on server restart. No write-back to <code>tasks.json</code>.</p>
+    </div>
+  </div>
+</div>
+
+<hr />
+<p style="color:#334155; font-size:12px;">Generated as part of RFP MC-2026-0417 delivery · Meridian Components Architecture Review · April 2026</p>
+
+</body>
+</html>
